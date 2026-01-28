@@ -94,40 +94,31 @@
   </div>
 
   <script>
-    // Track SDK state and pending callbacks
-    let sdkReady = false;
-    let pendingCallbacks = [];
+    // SDK Configuration
+    const SDK_URL = 'https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js';
+    const SIGNUP_CONFIG_URL = 'https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec';
+    const WORKSPACE_ID = '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7';
+    const CONTACT_PROJECT_ID = '763be82d-5dd4-4305-b4ec-d45dbbcd569b';
     
-    // This runs BEFORE the SDK loads to intercept initialization
-    window.birdAsyncInit = function(sdk, conf) {
-      // Initialize SDK but with embeddables disabled initially
-      sdk.init({
-        config: {
-          ...conf,
-          embeddables: {
-            ...conf.embeddables,
-            autoShow: false
-          }
-        }
-      });
+    // Track which SDK/form is currently loaded
+    let currentlyLoaded = null; // 'signup' | 'contact' | null
+
+    function cleanupExisting() {
+      // Remove any existing Bird elements
+      document.querySelectorAll('bird-form, bird-popup, bird-chat').forEach(el => el.remove());
       
-      // Mark SDK as ready and run any pending callbacks
-      sdkReady = true;
-      console.log('Bird SDK initialized with custom config');
+      // Remove existing SDK script
+      const existingScript = document.querySelector('script[src*="bird-sdk"]');
+      if (existingScript) {
+        existingScript.remove();
+      }
       
-      // Execute any pending callbacks
-      pendingCallbacks.forEach(function(cb) {
-        cb();
-      });
-      pendingCallbacks = [];
-    };
-    
-    // Helper to run code when SDK is ready
-    function whenSdkReady(callback) {
-      if (sdkReady && window.Bird) {
-        callback();
-      } else {
-        pendingCallbacks.push(callback);
+      // Clear Bird from window (SDK cleanup)
+      if (window.Bird) {
+        delete window.Bird;
+      }
+      if (window.birdAsyncInit) {
+        delete window.birdAsyncInit;
       }
     }
 
@@ -136,58 +127,71 @@
       btn.disabled = true;
       btn.textContent = 'Loading...';
       
-      whenSdkReady(function() {
+      // Clean up any existing Bird elements/SDK
+      cleanupExisting();
+      
+      // Load SDK with the signup form config - it will auto-show based on that config
+      const script = document.createElement('script');
+      script.src = SDK_URL;
+      script.setAttribute('data-config-url', SIGNUP_CONFIG_URL);
+      
+      script.onload = function() {
+        console.log('Sign-up SDK loaded');
         btn.disabled = false;
         btn.textContent = 'Sign-up';
-        
-        // Remove existing form if any
-        const existingForm = document.querySelector('bird-form');
-        if (existingForm) {
-          existingForm.remove();
-        }
-        
-        // Create the bird-form element
-        const form = document.createElement('bird-form');
-        form.setAttribute('workspace-id', '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7');
-        document.body.appendChild(form);
-        
-        console.log('Sign-up form created');
-      });
+        currentlyLoaded = 'signup';
+      };
+      
+      script.onerror = function() {
+        console.error('Failed to load SDK');
+        btn.disabled = false;
+        btn.textContent = 'Sign-up';
+        alert('Failed to load form. Please try again.');
+      };
+      
+      document.body.appendChild(script);
     }
 
     function loadContactSpecialist(btn) {
-      console.log('Loading Contact Specialist popup...');
+      console.log('Loading Contact Specialist...');
       btn.disabled = true;
       btn.textContent = 'Loading...';
       
-      whenSdkReady(function() {
+      // Clean up any existing Bird elements/SDK
+      cleanupExisting();
+      
+      // For the contact popup, we need SDK loaded first, then create the popup element
+      // Load SDK without config-url to prevent auto-showing anything
+      const script = document.createElement('script');
+      script.src = SDK_URL;
+      // Don't set data-config-url - we'll manually create the popup
+      
+      script.onload = function() {
+        console.log('SDK loaded for contact popup');
         btn.disabled = false;
         btn.textContent = 'Contact Specialist';
-        
-        // Remove existing popup if any
-        const existingPopup = document.querySelector('bird-popup');
-        if (existingPopup) {
-          existingPopup.remove();
-        }
+        currentlyLoaded = 'contact';
         
         // Create bird-popup element
         const popup = document.createElement('bird-popup');
-        popup.setAttribute('project-id', '763be82d-5dd4-4305-b4ec-d45dbbcd569b');
-        popup.setAttribute('workspace-id', '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7');
+        popup.setAttribute('project-id', CONTACT_PROJECT_ID);
+        popup.setAttribute('workspace-id', WORKSPACE_ID);
         document.body.appendChild(popup);
         
-        console.log('Contact popup created');
-      });
+        console.log('Contact popup element added');
+      };
+      
+      script.onerror = function() {
+        console.error('Failed to load SDK');
+        btn.disabled = false;
+        btn.textContent = 'Contact Specialist';
+        alert('Failed to load. Please try again.');
+      };
+      
+      document.body.appendChild(script);
     }
     
-    console.log('Page loaded. Waiting for Bird SDK...');
-  </script>
-
-  <!-- Load Bird SDK after our init function is defined -->
-  <script 
-    async 
-    src="https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js" 
-    data-config-url="https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec">
+    console.log('Page ready - no SDK loaded until button click');
   </script>
 </body>
 </html>
