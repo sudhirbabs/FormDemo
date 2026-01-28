@@ -81,40 +81,6 @@
       opacity: 0.7;
       cursor: wait;
     }
-
-    /* ============================================
-       BIRD FORMS - HIDE BY DEFAULT
-       ============================================ */
-    
-    /* Hide ALL Bird elements initially */
-    bird-form,
-    bird-popup,
-    [id^="popup-"],
-    [id^="form-"],
-    [class*="bird-"] {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-    
-    /* Show signup form when body has 'show-signup' class */
-    body.show-signup bird-form,
-    body.show-signup [id^="form-"] {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      pointer-events: auto !important;
-    }
-    
-    /* Show contact popup when body has 'show-contact' class */
-    body.show-contact bird-popup,
-    body.show-contact [id^="popup-"] {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      pointer-events: auto !important;
-    }
   </style>
 </head>
 <body>
@@ -127,42 +93,72 @@
     </div>
   </div>
 
-  <!-- Bird SDK - loads both forms but CSS hides them initially -->
+  <!-- Bird SDK -->
   <script 
     src="https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js" 
     data-config-url="https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec">
   </script>
 
   <script>
+    const SIGNUP_PROJECT_ID = '96d17d4e-9d4f-41b0-a3a8-ae7641a88d92';
+    const CONTACT_PROJECT_ID = '763be82d-5dd4-4305-b4ec-d45dbbcd569b';
+    
+    // Wait for SDK to initialize and hide popups on load
+    function initializePopups() {
+      const popups = document.querySelectorAll('bird-popup');
+      popups.forEach(popup => {
+        // Hide all popups initially using their native hide method
+        if (typeof popup.hide === 'function') {
+          popup.hide();
+          console.log('Hidden popup:', popup.getAttribute('project-id'));
+        }
+      });
+    }
+    
+    // Try to initialize immediately and also after a delay (in case SDK isn't ready)
+    setTimeout(initializePopups, 500);
+    setTimeout(initializePopups, 1000);
+    setTimeout(initializePopups, 2000);
+    
+    function getPopupByProjectId(projectId) {
+      return document.querySelector(`bird-popup[project-id="${projectId}"]`);
+    }
+    
+    function hideAllPopups() {
+      document.querySelectorAll('bird-popup').forEach(popup => {
+        if (typeof popup.hide === 'function') {
+          popup.hide();
+        }
+      });
+    }
+    
     function showSignUp() {
-      // Remove contact class, add signup class
-      document.body.classList.remove('show-contact');
-      document.body.classList.add('show-signup');
-      console.log('Showing sign-up form');
+      console.log('Show sign-up clicked');
+      hideAllPopups();
+      
+      const popup = getPopupByProjectId(SIGNUP_PROJECT_ID);
+      if (popup && typeof popup.show === 'function') {
+        popup.show();
+        console.log('Sign-up form shown');
+      } else {
+        console.log('Sign-up popup not found or show method not available');
+      }
     }
     
     function showContact() {
-      // Remove signup class, add contact class
-      document.body.classList.remove('show-signup');
-      document.body.classList.add('show-contact');
-      console.log('Showing contact popup');
+      console.log('Show contact clicked');
+      hideAllPopups();
+      
+      const popup = getPopupByProjectId(CONTACT_PROJECT_ID);
+      if (popup && typeof popup.show === 'function') {
+        popup.show();
+        console.log('Contact popup shown');
+      } else {
+        console.log('Contact popup not found or show method not available');
+      }
     }
     
-    // Optional: Listen for form close events to remove the class
-    // This allows the form to be re-opened on next button click
-    document.addEventListener('click', function(e) {
-      // Check if user clicked a close button inside Bird forms
-      if (e.target.closest('[aria-label="Close"]') || 
-          e.target.closest('.close-button') ||
-          e.target.closest('button[class*="close"]')) {
-        // Small delay to let the form close animation complete
-        setTimeout(function() {
-          document.body.classList.remove('show-signup', 'show-contact');
-        }, 300);
-      }
-    });
-    
-    console.log('Page ready - forms hidden until button click');
+    console.log('Page ready - waiting for Bird SDK to initialize popups');
   </script>
 </body>
 </html>
