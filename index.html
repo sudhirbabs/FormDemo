@@ -10,7 +10,6 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,7 +19,6 @@
       justify-content: center;
       padding: 20px;
     }
-
     .container {
       background: white;
       border-radius: 12px;
@@ -30,27 +28,23 @@
       width: 100%;
       text-align: center;
     }
-
     h1 {
       font-size: 28px;
       color: #333;
       margin-bottom: 12px;
       font-weight: 600;
     }
-
     .subtitle {
       color: #666;
       font-size: 14px;
       margin-bottom: 40px;
       line-height: 1.5;
     }
-
     .button-group {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
-
     button {
       padding: 14px 24px;
       font-size: 16px;
@@ -61,32 +55,31 @@
       transition: all 0.3s ease;
       width: 100%;
     }
-
     .btn-signup {
       background: #667eea;
       color: white;
     }
-
     .btn-signup:hover {
       background: #5568d3;
       transform: translateY(-2px);
       box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
     }
-
     .btn-contact {
       background: white;
       color: #667eea;
       border: 2px solid #667eea;
     }
-
     .btn-contact:hover {
       background: #f8f9ff;
       transform: translateY(-2px);
       box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
     }
-
     button:active {
       transform: translateY(0);
+    }
+    button:disabled {
+      opacity: 0.7;
+      cursor: wait;
     }
   </style>
 </head>
@@ -94,43 +87,107 @@
   <div class="container">
     <h1>Welcome to Bird</h1>
     <p class="subtitle">Choose an option to get started</p>
-
     <div class="button-group">
-      <button class="btn-signup" onclick="loadSignUp()">Sign-up</button>
-      <button class="btn-contact" onclick="loadContactSpecialist()">Contact Specialist</button>
+      <button class="btn-signup" onclick="loadSignUp(this)">Sign-up</button>
+      <button class="btn-contact" onclick="loadContactSpecialist(this)">Contact Specialist</button>
     </div>
   </div>
 
-  <!-- Bird SDK Script - Loaded Once -->
-  <script src="https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js" data-config-url="https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec"></script>
-
   <script>
-    function loadSignUp() {
-      console.log('Loading Sign-up form...');
-      // Trigger the Bird SDK form using the config URL
-      if (window.BirdSdk) {
-        window.BirdSdk.openForm();
-      }
-    }
-
-    function loadContactSpecialist() {
-      console.log('Loading Contact Specialist popup...');
-      // Create and append the bird-popup element
-      const existingPopup = document.querySelector('bird-popup');
-      if (existingPopup) {
-        existingPopup.remove();
-      }
+    // Track SDK state and pending callbacks
+    let sdkReady = false;
+    let pendingCallbacks = [];
+    
+    // This runs BEFORE the SDK loads to intercept initialization
+    window.birdAsyncInit = function(sdk, conf) {
+      // Initialize SDK but with embeddables disabled initially
+      sdk.init({
+        config: {
+          ...conf,
+          embeddables: {
+            ...conf.embeddables,
+            autoShow: false
+          }
+        }
+      });
       
-      const popup = document.createElement('bird-popup');
-      popup.setAttribute('project-id', '763be82d-5dd4-4305-b4ec-d45dbbcd569b');
-      popup.setAttribute('workspace-id', '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7');
-      document.body.appendChild(popup);
+      // Mark SDK as ready and run any pending callbacks
+      sdkReady = true;
+      console.log('Bird SDK initialized with custom config');
+      
+      // Execute any pending callbacks
+      pendingCallbacks.forEach(function(cb) {
+        cb();
+      });
+      pendingCallbacks = [];
+    };
+    
+    // Helper to run code when SDK is ready
+    function whenSdkReady(callback) {
+      if (sdkReady && window.Bird) {
+        callback();
+      } else {
+        pendingCallbacks.push(callback);
+      }
     }
 
-    // Check if Bird SDK is loaded
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('Page loaded, Bird SDK:', window.BirdSdk ? 'Available' : 'Not loaded yet');
-    });
+    function loadSignUp(btn) {
+      console.log('Loading Sign-up form...');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      
+      whenSdkReady(function() {
+        btn.disabled = false;
+        btn.textContent = 'Sign-up';
+        
+        // Remove existing form if any
+        const existingForm = document.querySelector('bird-form');
+        if (existingForm) {
+          existingForm.remove();
+        }
+        
+        // Create the bird-form element
+        const form = document.createElement('bird-form');
+        form.setAttribute('workspace-id', '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7');
+        document.body.appendChild(form);
+        
+        console.log('Sign-up form created');
+      });
+    }
+
+    function loadContactSpecialist(btn) {
+      console.log('Loading Contact Specialist popup...');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      
+      whenSdkReady(function() {
+        btn.disabled = false;
+        btn.textContent = 'Contact Specialist';
+        
+        // Remove existing popup if any
+        const existingPopup = document.querySelector('bird-popup');
+        if (existingPopup) {
+          existingPopup.remove();
+        }
+        
+        // Create bird-popup element
+        const popup = document.createElement('bird-popup');
+        popup.setAttribute('project-id', '763be82d-5dd4-4305-b4ec-d45dbbcd569b');
+        popup.setAttribute('workspace-id', '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7');
+        document.body.appendChild(popup);
+        
+        console.log('Contact popup created');
+      });
+    }
+    
+    console.log('Page loaded. Waiting for Bird SDK...');
+  </script>
+
+  <!-- Load Bird SDK after our init function is defined -->
+  <script 
+    async 
+    src="https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js" 
+    data-config-url="https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec">
   </script>
 </body>
 </html>
