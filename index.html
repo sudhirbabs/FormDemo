@@ -81,6 +81,40 @@
       opacity: 0.7;
       cursor: wait;
     }
+
+    /* ============================================
+       BIRD FORMS - HIDE BY DEFAULT
+       ============================================ */
+    
+    /* Hide ALL Bird elements initially */
+    bird-form,
+    bird-popup,
+    [id^="popup-"],
+    [id^="form-"],
+    [class*="bird-"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    
+    /* Show signup form when body has 'show-signup' class */
+    body.show-signup bird-form,
+    body.show-signup [id^="form-"] {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
+    
+    /* Show contact popup when body has 'show-contact' class */
+    body.show-contact bird-popup,
+    body.show-contact [id^="popup-"] {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+    }
   </style>
 </head>
 <body>
@@ -88,110 +122,47 @@
     <h1>Welcome to Bird</h1>
     <p class="subtitle">Choose an option to get started</p>
     <div class="button-group">
-      <button class="btn-signup" onclick="loadSignUp(this)">Sign-up</button>
-      <button class="btn-contact" onclick="loadContactSpecialist(this)">Contact Specialist</button>
+      <button class="btn-signup" onclick="showSignUp()">Sign-up</button>
+      <button class="btn-contact" onclick="showContact()">Contact Specialist</button>
     </div>
   </div>
 
+  <!-- Bird SDK - loads both forms but CSS hides them initially -->
+  <script 
+    src="https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js" 
+    data-config-url="https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec">
+  </script>
+
   <script>
-    // SDK Configuration
-    const SDK_URL = 'https://embeddables.p.mbirdcdn.net/sdk/v0/bird-sdk.js';
-    const SIGNUP_CONFIG_URL = 'https://api.bird.com/workspaces/12a50bd3-499f-4164-adb9-0fcf6cdb9ef7/applications/96cad196-ac4c-4f81-81d2-9b6c5c3dbba2/signature/2024-06-17T17-12-51_19c47a6eec';
-    const WORKSPACE_ID = '12a50bd3-499f-4164-adb9-0fcf6cdb9ef7';
-    const CONTACT_PROJECT_ID = '763be82d-5dd4-4305-b4ec-d45dbbcd569b';
-    
-    // Track which SDK/form is currently loaded
-    let currentlyLoaded = null; // 'signup' | 'contact' | null
-
-    function cleanupExisting() {
-      // Remove any existing Bird elements
-      document.querySelectorAll('bird-form, bird-popup, bird-chat').forEach(el => el.remove());
-      
-      // Remove existing SDK script
-      const existingScript = document.querySelector('script[src*="bird-sdk"]');
-      if (existingScript) {
-        existingScript.remove();
-      }
-      
-      // Clear Bird from window (SDK cleanup)
-      if (window.Bird) {
-        delete window.Bird;
-      }
-      if (window.birdAsyncInit) {
-        delete window.birdAsyncInit;
-      }
-    }
-
-    function loadSignUp(btn) {
-      console.log('Loading Sign-up form...');
-      btn.disabled = true;
-      btn.textContent = 'Loading...';
-      
-      // Clean up any existing Bird elements/SDK
-      cleanupExisting();
-      
-      // Load SDK with the signup form config - it will auto-show based on that config
-      const script = document.createElement('script');
-      script.src = SDK_URL;
-      script.setAttribute('data-config-url', SIGNUP_CONFIG_URL);
-      
-      script.onload = function() {
-        console.log('Sign-up SDK loaded');
-        btn.disabled = false;
-        btn.textContent = 'Sign-up';
-        currentlyLoaded = 'signup';
-      };
-      
-      script.onerror = function() {
-        console.error('Failed to load SDK');
-        btn.disabled = false;
-        btn.textContent = 'Sign-up';
-        alert('Failed to load form. Please try again.');
-      };
-      
-      document.body.appendChild(script);
-    }
-
-    function loadContactSpecialist(btn) {
-      console.log('Loading Contact Specialist...');
-      btn.disabled = true;
-      btn.textContent = 'Loading...';
-      
-      // Clean up any existing Bird elements/SDK
-      cleanupExisting();
-      
-      // For the contact popup, we need SDK loaded first, then create the popup element
-      // Load SDK without config-url to prevent auto-showing anything
-      const script = document.createElement('script');
-      script.src = SDK_URL;
-      // Don't set data-config-url - we'll manually create the popup
-      
-      script.onload = function() {
-        console.log('SDK loaded for contact popup');
-        btn.disabled = false;
-        btn.textContent = 'Contact Specialist';
-        currentlyLoaded = 'contact';
-        
-        // Create bird-popup element
-        const popup = document.createElement('bird-popup');
-        popup.setAttribute('project-id', CONTACT_PROJECT_ID);
-        popup.setAttribute('workspace-id', WORKSPACE_ID);
-        document.body.appendChild(popup);
-        
-        console.log('Contact popup element added');
-      };
-      
-      script.onerror = function() {
-        console.error('Failed to load SDK');
-        btn.disabled = false;
-        btn.textContent = 'Contact Specialist';
-        alert('Failed to load. Please try again.');
-      };
-      
-      document.body.appendChild(script);
+    function showSignUp() {
+      // Remove contact class, add signup class
+      document.body.classList.remove('show-contact');
+      document.body.classList.add('show-signup');
+      console.log('Showing sign-up form');
     }
     
-    console.log('Page ready - no SDK loaded until button click');
+    function showContact() {
+      // Remove signup class, add contact class
+      document.body.classList.remove('show-signup');
+      document.body.classList.add('show-contact');
+      console.log('Showing contact popup');
+    }
+    
+    // Optional: Listen for form close events to remove the class
+    // This allows the form to be re-opened on next button click
+    document.addEventListener('click', function(e) {
+      // Check if user clicked a close button inside Bird forms
+      if (e.target.closest('[aria-label="Close"]') || 
+          e.target.closest('.close-button') ||
+          e.target.closest('button[class*="close"]')) {
+        // Small delay to let the form close animation complete
+        setTimeout(function() {
+          document.body.classList.remove('show-signup', 'show-contact');
+        }, 300);
+      }
+    });
+    
+    console.log('Page ready - forms hidden until button click');
   </script>
 </body>
 </html>
